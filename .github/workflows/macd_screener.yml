@@ -1,0 +1,32 @@
+name: MACD Screener Daily
+
+# Schedule to run every day at 4 PM UK time
+# UK time = UTC+0 (winter), UTC+1 (summer), adjust cron if needed
+on:
+  schedule:
+    - cron: "0 16 * * *"  # 16:00 UTC → adjust for DST if necessary
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  run_macd_screener:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install yfinance pandas numpy
+
+    - name: Run MACD Screener
+      run: python macd_negative_crossover_email_csv.py
+      env:
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
