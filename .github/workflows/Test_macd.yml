@@ -1,4 +1,4 @@
- name: Test MACD Screener
+name: Test MACD Screener
 
 on:
   workflow_dispatch:  # Manual trigger for testing
