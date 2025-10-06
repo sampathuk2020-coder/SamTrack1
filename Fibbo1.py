@@ -77,9 +77,10 @@ if not result_df.empty:
     # Format DataFrame as text
     body_text = result_df.to_string(index=False)
 
-    sender = os.environ.get("EMAIL_USER")
-    password = os.environ.get("EMAIL_PASSWORD")
-    recipient = os.environ.get("EMAIL_TO")
+ #   sender = os.environ.get("EMAIL_USER")
+     sender = "sampath.uk2020@gmail.com" 
+     password = os.environ.get("EMAIL_PASSWORD")
+    recipient = "sampath.uk2020@gmail.com"
 
     subject = "NASDAQ-100 SMA Daily Report"
 
