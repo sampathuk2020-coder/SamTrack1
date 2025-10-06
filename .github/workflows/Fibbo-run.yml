@@ -2,13 +2,11 @@ name: Daily Python Script Run
 
 on:
   schedule:
-    # Runs at 16:00 (4:00 PM) UK time (which is UTC+0 in winter, UTC+1 in summer)
-    # So we use UTC time here:
-    # During British Summer Time (BST), 4 PM UK = 15:00 UTC
-    # During GMT, 4 PM UK = 16:00 UTC
-    - cron: "0 15 * 4-10 *"   # BST months (Apr–Oct)
-    - cron: "0 16 * 11-3 *"   # GMT months (Nov–Mar)
-  workflow_dispatch:  # allow manual triggering
+    # BST (British Summer Time): April to October → 15:00 UTC = 16:00 UK
+    - cron: "0 15 * 4,5,6,7,8,9,10 *"
+    # GMT (UK winter): November to March → 16:00 UTC = 16:00 UK
+    - cron: "0 16 * 1,2,3,11,12 *"
+  workflow_dispatch:  # optional manual trigger
 
 jobs:
   run-script:
@@ -29,4 +27,4 @@ jobs:
 
     - name: Run Python script
       run: |
-        python main.py
+        python Fibbo.py
