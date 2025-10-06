@@ -29,6 +29,46 @@ SMA_PERIOD = 100
 TOLERANCE = 0.01   # 1%
 LOOKBACK = 15      # Days to check for SMA touches
 
+# --- 📧 Send email (replicated exactly from first file) ---
+def send_email(df_results, recipient_email):
+    sender_email = os.environ.get("EMAIL_USER")
+    sender_password = os.environ.get("EMAIL_PASSWORD")
+
+    subject = f"NASDAQ-100 SMA100 Touch Report — {datetime.now().strftime('%Y-%m-%d')}"
+
+    # Convert DataFrame to HTML table
+    html_table = df_results.to_html(index=False)
+
+    # Create MIME message
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(html_table, 'html'))
+
+    # Convert DataFrame to CSV in memory
+    csv_buffer = io.StringIO()
+    df_results.to_csv(csv_buffer, index=False)
+    csv_buffer.seek(0)
+
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload(csv_buffer.read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', 'attachment',
+                    filename=f"SMA100_Touch_Report_{datetime.now().strftime('%Y-%m-%d')}.csv")
+    msg.attach(part)
+
+    # Send email via Gmail SMTP
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        print(f"✅ Email sent to {recipient_email}")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
+
 # --- 3️⃣ Scan each ticker ---
 rows = []
 
@@ -76,42 +116,5 @@ else:
     print("\n📊 NASDAQ-100 tickers touching 100-day SMA (±1%) in last 15 days:")
     print(result_df.to_string(index=False))
 
-# --- 5️⃣ Email the results (SAME STYLE AS FIRST FILE) ---
-if not result_df.empty:
-    sender_email = os.environ.get("EMAIL_USER")
-    sender_password = os.environ.get("EMAIL_PASSWORD")
-    recipient_email = "sampath.uk2020@gmail.com"
-    subject = f"NASDAQ-100 SMA100 Touch Report — {datetime.now().strftime('%Y-%m-%d')}"
-
-    # HTML table
-    html_table = result_df.to_html(index=False)
-
-    msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = recipient_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(html_table, 'html'))
-
-    # CSV attachment
-    csv_buffer = io.StringIO()
-    result_df.to_csv(csv_buffer, index=False)
-    csv_buffer.seek(0)
-
-    part = MIMEBase('application', 'octet-stream')
-    part.set_payload(csv_buffer.read())
-    encoders.encode_base64(part)
-    part.add_header('Content-Disposition', 'attachment',
-                    filename=f"SMA100_Touch_Report_{datetime.now().strftime('%Y-%m-%d')}.csv")
-    msg.attach(part)
-
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        server.quit()
-        print(f"✅ Email sent to {recipient_email}")
-    except Exception as e:
-        print(f"❌ Failed to send email: {e}")
-else:
-    print("No matches found — no email sent.")
+    # Send email using the shared function
+    send_email(result_df, "sampath.uk2020@gmail.com")
