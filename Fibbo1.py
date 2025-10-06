@@ -4,7 +4,11 @@ import numpy as np
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+import io
 import os
+from datetime import datetime
 
 # --- 1️⃣ Full NASDAQ-100 ticker list (2025) ---
 tickers = [
@@ -72,29 +76,41 @@ else:
     print("\n📊 NASDAQ-100 tickers touching 100-day SMA (±1%) in last 15 days:")
     print(result_df.to_string(index=False))
 
-# --- 5️⃣ Email the results ---
+# --- 5️⃣ Email the results (SAME STYLE AS FIRST FILE) ---
 if not result_df.empty:
-    # Format DataFrame as text
-    body_text = result_df.to_string(index=False)
+    sender_email = os.environ.get("EMAIL_USER")
+    sender_password = os.environ.get("EMAIL_PASSWORD")
+    recipient_email = "sampath.uk2020@gmail.com"
+    subject = f"NASDAQ-100 SMA100 Touch Report — {datetime.now().strftime('%Y-%m-%d')}"
 
- #   sender = os.environ.get("EMAIL_USER")
-     sender = "sampath.uk2020@gmail.com" 
-     password = os.environ.get("EMAIL_PASSWORD")
-    recipient = "sampath.uk2020@gmail.com"
-
-    subject = "NASDAQ-100 SMA Daily Report"
+    # HTML table
+    html_table = result_df.to_html(index=False)
 
     msg = MIMEMultipart()
-    msg["From"] = sender
-    msg["To"] = recipient
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body_text, "plain"))
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(html_table, 'html'))
+
+    # CSV attachment
+    csv_buffer = io.StringIO()
+    result_df.to_csv(csv_buffer, index=False)
+    csv_buffer.seek(0)
+
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload(csv_buffer.read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', 'attachment',
+                    filename=f"SMA100_Touch_Report_{datetime.now().strftime('%Y-%m-%d')}.csv")
+    msg.attach(part)
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender, password)
-            server.send_message(msg)
-        print(f"📧 Email sent to {recipient}")
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        print(f"✅ Email sent to {recipient_email}")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 else:
