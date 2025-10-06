@@ -28,3 +28,6 @@ jobs:
     - name: Run Python script
       run: |
         python Fibbo1.py
+
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
