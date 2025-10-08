@@ -1,4 +1,5 @@
 yfinance
 pandas
 numpy
-tvdatafeed
+pip uninstall tvdatafeed -y
+pip install git+https://github.com/StreamAlpha/tvdatafeed.git
