@@ -1,4 +1,4 @@
-import yfinance as yf
+ import yfinance as yf
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -27,9 +27,9 @@ TICKERS = [
 ]
 
 # -----------------------------
-# 📌 Email Function (single)
+# 📌 Email Function (HTML tables + CSV attachments)
 # -----------------------------
-def send_email_two_csv(df1, df2, recipient_email):
+def send_email_two_csv_html(df1, df2, recipient_email):
     sender_email = os.environ.get("EMAIL_USER")
     sender_password = os.environ.get("EMAIL_PASSWORD")
 
@@ -40,17 +40,16 @@ def send_email_two_csv(df1, df2, recipient_email):
     msg['To'] = recipient_email
     msg['Subject'] = subject
 
-    # Optional HTML summary in email body
+    # HTML body with both tables
     html_body = f"""
     <html>
     <body>
         <h2>NASDAQ-100 Screener Results</h2>
-        <p>Attached are two CSV files:</p>
-        <ul>
-            <li>MACD Negative Territory Crossovers</li>
-            <li>SMA100 Touch Report</li>
-        </ul>
         <p>Date: {datetime.now().strftime('%Y-%m-%d')}</p>
+        <h3>1️⃣ MACD Negative Territory Crossovers</h3>
+        {df1.to_html(index=False) if not df1.empty else "<p>No results found.</p>"}
+        <h3>2️⃣ SMA100 Touch Report</h3>
+        {df2.to_html(index=False) if not df2.empty else "<p>No results found.</p>"}
     </body>
     </html>
     """
@@ -78,7 +77,7 @@ def send_email_two_csv(df1, df2, recipient_email):
                      filename=f"SMA100_Touch_Report_{datetime.now().strftime('%Y-%m-%d')}.csv")
     msg.attach(part2)
 
-    # Send email via Gmail
+    # Send email
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
@@ -176,4 +175,4 @@ if __name__ == "__main__":
         print("\n🚫 No SMA100 touches found.")
 
     if not macd_df.empty or not sma_df.empty:
-        send_email_two_csv(macd_df, sma_df, "sampath.uk2020@gmail.com")
+        send_email_two_csv_html(macd_df, sma_df, "sampath.uk2020@gmail.com")
