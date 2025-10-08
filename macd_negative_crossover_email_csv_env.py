@@ -9,7 +9,7 @@ from email import encoders
 import io
 import os
 from datetime import datetime
-from tvDatafeed import TvDatafeed, Interval
+from lib.tvdatafeed.tvDatafeed import TvDatafeed, Interval
 
 # ================================
 # 📌 Ticker Lists
