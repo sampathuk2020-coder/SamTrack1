@@ -15,8 +15,8 @@ from lib.tvdatafeed.tvDatafeed import TvDatafeed, Interval
 # 📌 Ticker Lists
 # ================================
 NASDAQ100_TICKERS = [
-    "3AAP", "3BAL", "3CON", "3EDF", "3GOO", "3ITL", "3KWE", "3LDE", "3LEU", "3LGO",
-    "3LNP", "3LOI", "3NFL", "3NVD", "3PLT", "3UKL", "5EUS", "5LUS", "5ULS", "AAPL",
+    "3AAP:LSE", "3BAL", "3CON", "3EDF", "3GOO", "3ITL", "3KWE", "3LDE", "3LEU", "3LGO",
+    "3LNP", "3LOI", "3NFL:LSE", "3NVD:LSE", "3PLT", "3UKL", "5EUS", "5LUS", "5ULS", "AAPL",
     "ACHR", "ADBE", "AMAT", "AMD", "AMGN", "AMZN", "ANET", "APP", "ASML", "AXP",
     "BKNG", "BLK", "BLKC", "CCJ", "CON3", "DAGB", "DAVV", "EQIX", "FSLR", "FWRG",
     "GLDW", "GOOGL", "HOOD", "HUT", "IBKR", "JPM", "KLAC", "LLY", "LQQ3", "LQS5",
