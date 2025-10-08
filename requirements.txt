@@ -1,4 +1,4 @@
 yfinance
 pandas
 numpy
-pip install git+https://github.com/StreamAlpha/tvdatafeed.git
+git+https://github.com/StreamAlpha/tvdatafeed.git
