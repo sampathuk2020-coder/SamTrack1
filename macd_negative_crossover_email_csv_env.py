@@ -1,7 +1,6 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from datetime import datetime
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -9,88 +8,23 @@ from email.mime.base import MIMEBase
 from email import encoders
 import io
 import os
+from datetime import datetime
 
-# -----------------------------
-# 📌 NASDAQ-100 Tickers
-# -----------------------------
-TICKERS = [
+# ================================
+# 📌 Ticker Lists
+# ================================
+NASDAQ100_TICKERS = [
     "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "NVDA", "META", "AVGO", "TSLA", "PEP",
     "COST", "ADBE", "CSCO", "TMUS", "INTC", "TXN", "QCOM", "AMGN", "SBUX", "INTU",
     "BKNG", "MDLZ", "ADI", "GILD", "ADP", "NFLX", "PLTR", "ASML", "AMD", "SNPS", "TTWO",
     "ISRG", "ROST", "IDXX", "KDP", "KLAC", "LULU", "MAR", "MCHP", "MU", "MRNA", "MRVL",
-    "MTCH", "NLOK", "NXPI", "OKTA", "ORLY", "PAYX", "PYPL", "REGN", "SPLK", "SWKS",
-    "SYMC", "VRSK", "VRTX", "WDC", "WDAY", "XEL", "ZS", "HON", "AMAT", "LRCX", "PANW",
-    "ABNB", "MELI", "CSX", "CHTR", "AEP", "FTNT", "MNST", "MSCI", "CDNS", "ODFL",
-    "CTAS", "ROP", "PCAR", "DXCM", "EXC", "KHC", "CTSH", "ILMN", "EBAY", "CRWD",
-    "TEAM", "BKR", "ANSS", "LCID", "VERX", "DDOG", "BIDU", "DOCU", "ALGN", "FAST",
-    "CHKP", "VRSN", "DLTR", "EXPE", "LBTYK", "LBTYA", "SIRI", "EA", "WBA", "FOX", "FOXA", "JD", "BIIB", "CEG"
+    "NXPI", "OKTA", "ORLY", "PAYX", "PYPL", "REGN", "SPLK", "SWKS", "TTWO", "TXN",
+    "VRSK", "VRTX", "WDC", "WDAY", "XEL", "ZS"
 ]
 
-# -----------------------------
-# 📌 Email Function (HTML tables + CSV attachments)
-# -----------------------------
-def send_email_two_csv_html(df1, df2, recipient_email):
-    sender_email = os.environ.get("EMAIL_USER")
-    sender_password = os.environ.get("EMAIL_PASSWORD")
-
-    subject = f"NASDAQ-100 Screener Results — {datetime.now().strftime('%Y-%m-%d')}"
-
-    msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = recipient_email
-    msg['Subject'] = subject
-
-    # HTML body with both tables
-    html_body = f"""
-    <html>
-    <body>
-        <h2>NASDAQ-100 Screener Results</h2>
-        <p>Date: {datetime.now().strftime('%Y-%m-%d')}</p>
-        <h3>1️⃣ MACD Negative Territory Crossovers</h3>
-        {df1.to_html(index=False) if not df1.empty else "<p>No results found.</p>"}
-        <h3>2️⃣ SMA100 Touch Report</h3>
-        {df2.to_html(index=False) if not df2.empty else "<p>No results found.</p>"}
-    </body>
-    </html>
-    """
-    msg.attach(MIMEText(html_body, 'html'))
-
-    # Attach first CSV
-    csv_buffer1 = io.StringIO()
-    df1.to_csv(csv_buffer1, index=False)
-    csv_buffer1.seek(0)
-    part1 = MIMEBase('application', 'octet-stream')
-    part1.set_payload(csv_buffer1.read())
-    encoders.encode_base64(part1)
-    part1.add_header('Content-Disposition', 'attachment',
-                     filename=f"MACD_Negative_Crossovers_{datetime.now().strftime('%Y-%m-%d')}.csv")
-    msg.attach(part1)
-
-    # Attach second CSV
-    csv_buffer2 = io.StringIO()
-    df2.to_csv(csv_buffer2, index=False)
-    csv_buffer2.seek(0)
-    part2 = MIMEBase('application', 'octet-stream')
-    part2.set_payload(csv_buffer2.read())
-    encoders.encode_base64(part2)
-    part2.add_header('Content-Disposition', 'attachment',
-                     filename=f"SMA100_Touch_Report_{datetime.now().strftime('%Y-%m-%d')}.csv")
-    msg.attach(part2)
-
-    # Send email
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        server.quit()
-        print(f"✅ Email sent to {recipient_email}")
-    except Exception as e:
-        print(f"❌ Failed to send email: {e}")
-
-# -----------------------------
-# 1️⃣ MACD Negative Territory Screener
-# -----------------------------
+# ================================
+# 📈 MACD Functions
+# ================================
 def calculate_macd(df, short=12, long=26, signal=9):
     df['EMA_short'] = df['Close'].ewm(span=short, adjust=False).mean()
     df['EMA_long'] = df['Close'].ewm(span=long, adjust=False).mean()
@@ -112,7 +46,8 @@ def check_negative_macd_crossover(df, days=100):
 def run_macd_screener():
     results = []
     print(f"\n📅 Running MACD Negative Territory Screener — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    for ticker in TICKERS:
+
+    for ticker in NASDAQ100_TICKERS:
         try:
             data = yf.download(ticker, period="6mo", interval="1d", progress=False)
             if data.empty:
@@ -123,33 +58,41 @@ def run_macd_screener():
                 results.append({"Ticker": ticker, "Most_Recent_Crossover": max(crossover_dates)})
         except Exception as e:
             print(f"❌ Error fetching {ticker}: {e}")
+
     return pd.DataFrame(results)
 
-# -----------------------------
-# 2️⃣ SMA100 Touch Scanner
-# -----------------------------
+
+# ================================
+# 📊 SMA100 Screener
+# ================================
 SMA_PERIOD = 100
 TOLERANCE = 0.01
 LOOKBACK = 15
 
 def run_sma_screener():
     rows = []
-    for t in TICKERS:
+    print(f"\n📅 Running SMA100 Touch Screener — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+
+    for t in NASDAQ100_TICKERS:
         try:
             df = yf.download(t, period=f"{SMA_PERIOD + LOOKBACK + 50}d", interval="1d", progress=False)
             if df.empty or len(df) < SMA_PERIOD:
                 continue
+
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
+
             price_col = 'Adj Close' if 'Adj Close' in df.columns else 'Close'
             df['Close'] = pd.to_numeric(df[price_col], errors='coerce')
             df['SMA100'] = df['Close'].rolling(SMA_PERIOD).mean()
             df = df.dropna(subset=['Close', 'SMA100'])
             recent = df.tail(LOOKBACK)
-            close_arr = np.asarray(recent['Close'], dtype=float)
-            sma_arr = np.asarray(recent['SMA100'], dtype=float)
+
+            close_arr = np.asarray(recent['Close'], dtype=float).ravel()
+            sma_arr = np.asarray(recent['SMA100'], dtype=float).ravel()
             mask = np.abs(close_arr - sma_arr) <= (TOLERANCE * sma_arr)
             matched = recent.loc[mask]
+
             if not matched.empty:
                 for ts, row in matched.iterrows():
                     rows.append({
@@ -158,16 +101,121 @@ def run_sma_screener():
                         "Close": float(row['Close']),
                         "SMA100": float(row['SMA100'])
                     })
+
         except Exception as e:
-            print(f"❌ Error processing {t}: {e}")
+            print(f"Error processing {t}: {e}")
+
     return pd.DataFrame(rows)
 
-# -----------------------------
-# 🔹 Main
-# -----------------------------
+
+# ================================
+# 🖌️ Highlight + HTML Table
+# ================================
+def highlight_most_recent(df, date_col, ticker_col="Ticker"):
+    if df.empty:
+        return df.copy()
+    df_copy = df.copy()
+    df_copy[date_col] = pd.to_datetime(df_copy[date_col])
+    recent_dates = df_copy.groupby(ticker_col)[date_col].transform("max")
+    df_copy["__highlight__"] = df_copy[date_col] == recent_dates
+    return df_copy
+
+def df_to_html_highlighted(df):
+    if df.empty:
+        return "<p>No data available.</p>"
+
+    def format_row(row):
+        html = ""
+        for col, val in row.items():
+            if col == "__highlight__":
+                continue
+            cell_val = str(val)
+            if row["__highlight__"]:
+                cell_val = f"<b style='color: #0070f3;'>{cell_val}</b>"
+            html += f"<td>{cell_val}</td>"
+        return f"<tr>{html}</tr>"
+
+    headers = "".join([f"<th>{col}</th>" for col in df.columns if col != "__highlight__"])
+    body = "".join([format_row(row) for _, row in df.iterrows()])
+
+    return f"""
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; font-family:Arial; font-size:13px; margin-bottom:20px;">
+        <thead style="background-color:#f2f2f2;">{headers}</thead>
+        <tbody>{body}</tbody>
+    </table>
+    """
+
+
+# ================================
+# 📧 Email Function
+# ================================
+def send_email_two_csv_html(macd_df, sma_df, recipient_email):
+    sender_email = os.environ.get("EMAIL_USER")
+    sender_password = os.environ.get("EMAIL_PASSWORD")
+
+    subject = f"NASDAQ-100 Technical Signals — {datetime.now().strftime('%Y-%m-%d')}"
+
+    html_macd = df_to_html_highlighted(macd_df)
+    html_sma = df_to_html_highlighted(sma_df)
+
+    html_body = f"""
+    <html>
+      <body>
+        <h2>📈 MACD Negative Territory Crossovers</h2>
+        {html_macd}
+
+        <h2>📊 SMA100 Touches (±1%)</h2>
+        {html_sma}
+
+        <p style="font-size:12px;color:#555;">* Most recent signal per ticker is <b style='color:#0070f3;'>highlighted</b>.</p>
+      </body>
+    </html>
+    """
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(html_body, 'html'))
+
+    # Attach CSVs
+    for df, name in [(macd_df, "MACD_Negative_Crossovers"), (sma_df, "SMA100_Touch_Report")]:
+        if not df.empty:
+            buffer = io.StringIO()
+            df.drop(columns=["__highlight__"], errors="ignore").to_csv(buffer, index=False)
+            buffer.seek(0)
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(buffer.read())
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', 'attachment', filename=f"{name}_{datetime.now().strftime('%Y-%m-%d')}.csv")
+            msg.attach(part)
+
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        print(f"✅ Email sent to {recipient_email}")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
+
+
+# ================================
+# 🚀 Main
+# ================================
 if __name__ == "__main__":
     macd_df = run_macd_screener()
     sma_df = run_sma_screener()
+
+    # Sort & highlight
+    if not macd_df.empty:
+        macd_df = macd_df.sort_values(by="Most_Recent_Crossover", ascending=False)
+        macd_df = highlight_most_recent(macd_df, "Most_Recent_Crossover")
+
+    if not sma_df.empty:
+        sma_df = sma_df.sort_values(by="Date", ascending=False)
+        sma_df = highlight_most_recent(sma_df, "Date")
 
     if macd_df.empty:
         print("\n🚫 No MACD Negative Territory crossovers found.")
