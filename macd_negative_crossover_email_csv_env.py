@@ -9,19 +9,11 @@ from email import encoders
 import io
 import os
 from datetime import datetime
+from tvDatafeed import TvDatafeed, Interval
 
 # ================================
 # 📌 Ticker Lists
 # ================================
-# NASDAQ100_TICKERS = [
-#    "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "NVDA", "META", "AVGO", "TSLA", "PEP",
-#    "COST", "ADBE", "CSCO", "TMUS", "INTC", "TXN", "QCOM", "AMGN", "SBUX", "INTU",
-#    "BKNG", "MDLZ", "ADI", "GILD", "ADP", "NFLX", "PLTR", "ASML", "AMD", "SNPS", "TTWO",
-#    "ISRG", "ROST", "IDXX", "KDP", "KLAC", "LULU", "MAR", "MCHP", "MU", "MRNA", "MRVL",
-#    "NXPI", "OKTA", "ORLY", "PAYX", "PYPL", "REGN", "SPLK", "SWKS", "TTWO", "TXN",
-#    "VRSK", "VRTX", "WDC", "WDAY", "XEL", "ZS"
-#]
-
 NASDAQ100_TICKERS = [
     "3AAP", "3BAL", "3CON", "3EDF", "3GOO", "3ITL", "3KWE", "3LDE", "3LEU", "3LGO",
     "3LNP", "3LOI", "3NFL", "3NVD", "3PLT", "3UKL", "5EUS", "5LUS", "5ULS", "AAPL",
@@ -32,6 +24,39 @@ NASDAQ100_TICKERS = [
     "SNOW", "SNV3", "SPY4", "SQS5", "TLN", "TSLA", "UNH", "V", "VST", "VUAG",
     "VUKG", "XNIF", "3AMZ", "3FB", "3AMD", "3SLV", "3HCL", "3TSM", "3MSF", "3GDX"
 ]
+
+# ================================
+# 📡 TradingView Fallback
+# ================================
+tv = TvDatafeed()  # You can also pass username/password if needed
+
+def fetch_data_with_fallback(ticker, period_days=180):
+    """
+    Try fetching from Yahoo first; if it fails or empty, fallback to TradingView (LSE).
+    Returns DataFrame with columns: Open, High, Low, Close, Volume, index as datetime.
+    """
+    try:
+        df_yf = yf.download(ticker, period=f"{period_days}d", interval="1d", progress=False)
+        if not df_yf.empty:
+            return df_yf
+    except Exception:
+        pass
+
+    # TradingView fallback
+    try:
+        df_tv = tv.get_hist(
+            symbol=ticker,
+            exchange='LSE',
+            interval=Interval.in_daily,
+            n_bars=period_days
+        )
+        if df_tv is not None and not df_tv.empty:
+            df_tv = df_tv.rename(columns=str.capitalize)  # Make columns 'Open', 'High', 'Low', 'Close', 'Volume'
+            return df_tv
+    except Exception as e:
+        print(f"⚠️ TradingView fallback failed for {ticker}: {e}")
+
+    return pd.DataFrame()  # return empty if both fail
 
 # ================================
 # 📈 MACD Functions
@@ -60,7 +85,7 @@ def run_macd_screener():
 
     for ticker in NASDAQ100_TICKERS:
         try:
-            data = yf.download(ticker, period="6mo", interval="1d", progress=False)
+            data = fetch_data_with_fallback(ticker, period_days=180)
             if data.empty:
                 continue
             data = calculate_macd(data)
@@ -71,7 +96,6 @@ def run_macd_screener():
             print(f"❌ Error fetching {ticker}: {e}")
 
     return pd.DataFrame(results)
-
 
 # ================================
 # 📊 SMA100 Screener
@@ -86,12 +110,9 @@ def run_sma_screener():
 
     for t in NASDAQ100_TICKERS:
         try:
-            df = yf.download(t, period=f"{SMA_PERIOD + LOOKBACK + 50}d", interval="1d", progress=False)
+            df = fetch_data_with_fallback(t, period_days=SMA_PERIOD + LOOKBACK + 50)
             if df.empty or len(df) < SMA_PERIOD:
                 continue
-
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
 
             price_col = 'Adj Close' if 'Adj Close' in df.columns else 'Close'
             df['Close'] = pd.to_numeric(df[price_col], errors='coerce')
@@ -112,12 +133,10 @@ def run_sma_screener():
                         "Close": float(row['Close']),
                         "SMA100": float(row['SMA100'])
                     })
-
         except Exception as e:
             print(f"Error processing {t}: {e}")
 
     return pd.DataFrame(rows)
-
 
 # ================================
 # 🖌️ Highlight + HTML Table
@@ -156,9 +175,8 @@ def df_to_html_highlighted(df):
     </table>
     """
 
-
 # ================================
-# 📧 Email Function
+# 📧 Email Function (unchanged)
 # ================================
 def send_email_two_csv_html(macd_df, sma_df, recipient_email):
     sender_email = os.environ.get("EMAIL_USER")
@@ -189,7 +207,6 @@ def send_email_two_csv_html(macd_df, sma_df, recipient_email):
     msg['Subject'] = subject
     msg.attach(MIMEText(html_body, 'html'))
 
-    # Attach CSVs
     for df, name in [(macd_df, "MACD_Negative_Crossovers"), (sma_df, "SMA100_Touch_Report")]:
         if not df.empty:
             buffer = io.StringIO()
@@ -211,7 +228,6 @@ def send_email_two_csv_html(macd_df, sma_df, recipient_email):
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 
-
 # ================================
 # 🚀 Main
 # ================================
@@ -219,7 +235,6 @@ if __name__ == "__main__":
     macd_df = run_macd_screener()
     sma_df = run_sma_screener()
 
-    # Sort & highlight
     if not macd_df.empty:
         macd_df = macd_df.sort_values(by="Most_Recent_Crossover", ascending=False)
         macd_df = highlight_most_recent(macd_df, "Most_Recent_Crossover")
