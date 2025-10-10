@@ -1,4 +1,4 @@
-name: Test MACD Screener
+name:  MACD SMA Screener
 
 on:
   schedule:
