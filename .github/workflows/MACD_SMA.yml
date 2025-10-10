@@ -1,7 +1,9 @@
 name: Test MACD Screener
 
 on:
-  workflow_dispatch:  # Manual trigger for testing
+  schedule:
+    - cron: "0 16 * * *"  # 16:00 UTC → adjust for DST if necessary
+    workflow_dispatch:  # Manual trigger for testing
 
 jobs:
   test_script:
