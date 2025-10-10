@@ -22,7 +22,7 @@ jobs:
           pip install yfinance pandas numpy
           
       - name: Run Python Script
-        run: python macd_negative_crossover_email_csv_env.py
+        run: python MACD_SMA.py
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
