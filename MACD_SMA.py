@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # ================================
-# 📌 Ticker Lists
+# 📌 Ticker List
 # ================================
 NASDAQ100_TICKERS = [
     "3AAP", "3BAL", "3CON", "3EDF", "3GOO", "3ITL", "3KWE", "3LDE", "3LEU", "3LGO",
@@ -36,36 +36,30 @@ def calculate_macd(df, short=12, long=26, signal=9):
 
 
 def check_negative_macd_crossover(df, days=100):
-    """Bullish cross in negative territory"""
+    """Bullish crossover in negative MACD region"""
     crossover_dates = []
     for i in range(1, min(days + 1, len(df))):
-        macd_prev = df['MACD'].iloc[-i-1]
-        signal_prev = df['Signal'].iloc[-i-1]
-        macd_curr = df['MACD'].iloc[-i]
-        signal_curr = df['Signal'].iloc[-i]
+        macd_prev, signal_prev = df['MACD'].iloc[-i - 1], df['Signal'].iloc[-i - 1]
+        macd_curr, signal_curr = df['MACD'].iloc[-i], df['Signal'].iloc[-i]
         if macd_prev < signal_prev and macd_curr > signal_curr and macd_curr < 0 and signal_curr < 0:
             crossover_dates.append(df.index[-i].date())
     return crossover_dates
 
 
-def check_positive_macd_crossover(df, days=100):
-    """Bearish cross in positive territory"""
+def check_positive_macd_bearish_crossover(df, days=100):
+    """Bearish crossover in positive MACD region"""
     crossover_dates = []
     for i in range(1, min(days + 1, len(df))):
-        macd_prev = df['MACD'].iloc[-i-1]
-        signal_prev = df['Signal'].iloc[-i-1]
-        macd_curr = df['MACD'].iloc[-i]
-        signal_curr = df['Signal'].iloc[-i]
+        macd_prev, signal_prev = df['MACD'].iloc[-i - 1], df['Signal'].iloc[-i - 1]
+        macd_curr, signal_curr = df['MACD'].iloc[-i], df['Signal'].iloc[-i]
         if macd_prev > signal_prev and macd_curr < signal_curr and macd_curr > 0 and signal_curr > 0:
             crossover_dates.append(df.index[-i].date())
     return crossover_dates
 
 
 def run_macd_screener():
-    results_bullish = []
-    results_bearish = []
-
-    print(f"\n📅 Running MACD Screener — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    bullish, bearish = [], []
+    print(f"\n📅 Running MACD Screeners — {datetime.now():%Y-%m-%d %H:%M:%S}\n")
 
     for ticker in NASDAQ100_TICKERS:
         try:
@@ -74,22 +68,20 @@ def run_macd_screener():
                 continue
             data = calculate_macd(data)
 
-            bullish_dates = check_negative_macd_crossover(data, days=100)
-            bearish_dates = check_positive_macd_crossover(data, days=100)
+            neg_cross = check_negative_macd_crossover(data)
+            pos_cross = check_positive_macd_bearish_crossover(data)
 
-            if bullish_dates:
-                results_bullish.append({"Ticker": ticker, "Most_Recent_Crossover": max(bullish_dates)})
-            if bearish_dates:
-                results_bearish.append({"Ticker": ticker, "Most_Recent_Crossover": max(bearish_dates)})
-
+            if neg_cross:
+                bullish.append({"Ticker": ticker, "Most_Recent_Crossover": max(neg_cross)})
+            if pos_cross:
+                bearish.append({"Ticker": ticker, "Most_Recent_Crossover": max(pos_cross)})
         except Exception as e:
             print(f"❌ Error fetching {ticker}: {e}")
 
     return (
-        pd.DataFrame(results_bullish),
-        pd.DataFrame(results_bearish)
+        pd.DataFrame(bullish),
+        pd.DataFrame(bearish)
     )
-
 
 # ================================
 # 📊 SMA100 Screener
@@ -100,14 +92,13 @@ LOOKBACK = 15
 
 def run_sma_screener():
     rows = []
-    print(f"\n📅 Running SMA100 Touch Screener — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    print(f"\n📅 Running SMA100 Touch Screener — {datetime.now():%Y-%m-%d %H:%M:%S}\n")
 
     for t in NASDAQ100_TICKERS:
         try:
             df = yf.download(t, period=f"{SMA_PERIOD + LOOKBACK + 50}d", interval="1d", progress=False)
             if df.empty or len(df) < SMA_PERIOD:
                 continue
-
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
 
@@ -117,9 +108,7 @@ def run_sma_screener():
             df = df.dropna(subset=['Close', 'SMA100'])
             recent = df.tail(LOOKBACK)
 
-            close_arr = np.asarray(recent['Close'], dtype=float).ravel()
-            sma_arr = np.asarray(recent['SMA100'], dtype=float).ravel()
-            mask = np.abs(close_arr - sma_arr) <= (TOLERANCE * sma_arr)
+            mask = np.abs(recent['Close'] - recent['SMA100']) <= (TOLERANCE * recent['SMA100'])
             matched = recent.loc[mask]
 
             if not matched.empty:
@@ -130,12 +119,10 @@ def run_sma_screener():
                         "Close": float(row['Close']),
                         "SMA100": float(row['SMA100'])
                     })
-
         except Exception as e:
             print(f"Error processing {t}: {e}")
 
     return pd.DataFrame(rows)
-
 
 # ================================
 # 🖌️ Highlight + HTML Table
@@ -154,27 +141,31 @@ def df_to_html_highlighted(df, color="#0070f3"):
     if df.empty:
         return "<p>No data available.</p>"
 
+    df_copy = df.copy()
+    if "__highlight__" not in df_copy.columns:
+        df_copy["__highlight__"] = False
+
     def format_row(row):
         html = ""
         for col, val in row.items():
             if col == "__highlight__":
                 continue
             cell_val = str(val)
-            if row["__highlight__"]:
+            if "__highlight__" in row and row["__highlight__"]:
                 cell_val = f"<b style='color:{color};'>{cell_val}</b>"
             html += f"<td>{cell_val}</td>"
         return f"<tr>{html}</tr>"
 
-    headers = "".join([f"<th>{col}</th>" for col in df.columns if col != "__highlight__"])
-    body = "".join([format_row(row) for _, row in df.iterrows()])
+    headers = "".join([f"<th>{col}</th>" for col in df_copy.columns if col != "__highlight__"])
+    body = "".join([format_row(row) for _, row in df_copy.iterrows()])
 
     return f"""
-    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; font-family:Arial; font-size:13px; margin-bottom:20px;">
+    <table border="1" cellpadding="6" cellspacing="0"
+           style="border-collapse:collapse; font-family:Arial; font-size:13px; margin-bottom:20px;">
         <thead style="background-color:#f2f2f2;">{headers}</thead>
         <tbody>{body}</tbody>
     </table>
     """
-
 
 # ================================
 # 📧 Email Function
@@ -183,26 +174,32 @@ def send_email_three_csv_html(macd_bull_df, macd_bear_df, sma_df, recipient_emai
     sender_email = os.environ.get("EMAIL_USER")
     sender_password = os.environ.get("EMAIL_PASSWORD")
 
-    subject = f"NASDAQ-100 Technical Signals — {datetime.now().strftime('%Y-%m-%d')}"
+    subject = f"NASDAQ-100 Technical Signals — {datetime.now():%Y-%m-%d}"
 
-    # Color-coded tables
+    # Safeguard highlight column existence
+    for df in [macd_bull_df, macd_bear_df, sma_df]:
+        if not df.empty and "__highlight__" not in df.columns:
+            df["__highlight__"] = False
+
     html_bull = df_to_html_highlighted(macd_bull_df, color="#00A86B")  # green
-    html_bear = df_to_html_highlighted(macd_bear_df, color="#D80000")  # red
-    html_sma = df_to_html_highlighted(sma_df, color="#E69500")         # amber
+    html_bear = df_to_html_highlighted(macd_bear_df, color="#FF4C4C")  # red
+    html_sma = df_to_html_highlighted(sma_df)
 
     html_body = f"""
     <html>
       <body>
-        <h2 style="color:#00A86B;">📈 MACD Bullish Crossovers (Negative Territory)</h2>
+        <h2>🟢 MACD Negative Territory — Bullish Crossovers</h2>
         {html_bull}
 
-        <h2 style="color:#D80000;">📉 MACD Bearish Crossovers (Positive Territory)</h2>
+        <h2>🔴 MACD Positive Territory — Bearish Crossovers</h2>
         {html_bear}
 
-        <h2 style="color:#E69500;">📊 SMA100 Touches (±1%)</h2>
+        <h2>📊 SMA100 Touches (±1%)</h2>
         {html_sma}
 
-        <p style="font-size:12px;color:#555;">* Most recent signal per ticker is highlighted in the corresponding color.</p>
+        <p style="font-size:12px;color:#555;">
+          * Most recent signal per ticker is <b style='color:#0070f3;'>highlighted</b>.
+        </p>
       </body>
     </html>
     """
@@ -215,8 +212,8 @@ def send_email_three_csv_html(macd_bull_df, macd_bear_df, sma_df, recipient_emai
 
     # Attach CSVs
     for df, name in [
-        (macd_bull_df, "MACD_Bullish_Negative_Crossovers"),
-        (macd_bear_df, "MACD_Bearish_Positive_Crossovers"),
+        (macd_bull_df, "MACD_Bullish_Negative"),
+        (macd_bear_df, "MACD_Bearish_Positive"),
         (sma_df, "SMA100_Touch_Report")
     ]:
         if not df.empty:
@@ -227,7 +224,7 @@ def send_email_three_csv_html(macd_bull_df, macd_bear_df, sma_df, recipient_emai
             part.set_payload(buffer.read())
             encoders.encode_base64(part)
             part.add_header('Content-Disposition', 'attachment',
-                            filename=f"{name}_{datetime.now().strftime('%Y-%m-%d')}.csv")
+                            filename=f"{name}_{datetime.now():%Y-%m-%d}.csv")
             msg.attach(part)
 
     try:
@@ -240,7 +237,6 @@ def send_email_three_csv_html(macd_bull_df, macd_bear_df, sma_df, recipient_emai
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 
-
 # ================================
 # 🚀 Main
 # ================================
@@ -249,20 +245,22 @@ if __name__ == "__main__":
     sma_df = run_sma_screener()
 
     # Sort & highlight
-    for df, date_col in [
-        (macd_bull_df, "Most_Recent_Crossover"),
-        (macd_bear_df, "Most_Recent_Crossover"),
-        (sma_df, "Date")
-    ]:
-        if not df.empty:
-            df.sort_values(by=date_col, ascending=False, inplace=True)
-            df[:] = highlight_most_recent(df, date_col)
+    if not macd_bull_df.empty:
+        macd_bull_df = macd_bull_df.sort_values(by="Most_Recent_Crossover", ascending=False)
+        macd_bull_df = highlight_most_recent(macd_bull_df, "Most_Recent_Crossover")
 
-    # Empty checks
+    if not macd_bear_df.empty:
+        macd_bear_df = macd_bear_df.sort_values(by="Most_Recent_Crossover", ascending=False)
+        macd_bear_df = highlight_most_recent(macd_bear_df, "Most_Recent_Crossover")
+
+    if not sma_df.empty:
+        sma_df = sma_df.sort_values(by="Date", ascending=False)
+        sma_df = highlight_most_recent(sma_df, "Date")
+
     if macd_bull_df.empty:
-        print("\n🚫 No MACD Bullish crossovers found.")
+        print("\n🚫 No MACD Bullish (Negative Territory) crossovers found.")
     if macd_bear_df.empty:
-        print("\n🚫 No MACD Bearish crossovers found.")
+        print("\n🚫 No MACD Bearish (Positive Territory) crossovers found.")
     if sma_df.empty:
         print("\n🚫 No SMA100 touches found.")
 
