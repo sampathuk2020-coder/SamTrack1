@@ -1,0 +1,33 @@
+name: Fibbo-email
+
+on:
+  schedule:
+    # BST (British Summer Time): April to October → 15:00 UTC = 16:00 UK
+    - cron: "0 15 * 4,5,6,7,8,9,10 *"
+    # GMT (UK winter): November to March → 16:00 UTC = 16:00 UK
+    - cron: "0 16 * 1,2,3,11,12 *"
+  workflow_dispatch:  # optional manual trigger
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Run Python script
+      run: |
+        python Stats.py
+
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
