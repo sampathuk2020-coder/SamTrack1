@@ -1,6 +1,7 @@
 name:  MACD SMA
 
 on:
+  - cron: "0 15
   workflow_dispatch:  # Manual trigger for testing
 
 jobs:
