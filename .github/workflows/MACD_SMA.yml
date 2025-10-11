@@ -1,7 +1,7 @@
 name:  MACD SMA
 
 on:
-  - cron: "0 15
+  - cron: "0 15 * * *"  # 15:00 UTC → adjust for DST if necessary
   workflow_dispatch:  # Manual trigger for testing
 
 jobs:
