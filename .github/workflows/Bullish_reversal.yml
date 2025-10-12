@@ -24,7 +24,7 @@ jobs:
           pip install yfinance pandas numpy
           
       - name: Run Python Script
-        run: python Bullish_reversal.py
+        run: python Bullish_Reversal.py
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
