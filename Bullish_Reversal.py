@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # ================================
-# 📌 Ticker List (NASDAQ Top 30)
+# 📌 NASDAQ Top 30
 # ================================
 NASDAQ_TOP30 = [
     "AAPL", "MSFT", "AMZN", "NVDA", "META", "GOOGL", "GOOG", "AVGO", "COST", "ADBE",
@@ -19,31 +19,32 @@ NASDAQ_TOP30 = [
     "AMGN", "INTU", "SBUX", "VRTX", "REGN", "MU", "PANW", "ADI", "LRCX", "MAR"
 ]
 
+
 # ================================
-# 🟩 Pattern Detection
+# 🟩 Bullish Reversal Detection
 # ================================
 def detect_bullish_reversal(df):
     """
-    Detects bullish engulfing and piercing patterns robustly.
-    Returns list of detected pattern dictionaries.
+    Detects bullish engulfing and piercing patterns robustly using .iloc indexing.
     """
     signals = []
     if df.shape[0] < 2:
         return signals
 
     df = df.tail(10).copy()
+    df.reset_index(drop=True, inplace=True)
 
     for i in range(1, len(df)):
-        # safely extract previous and current candle values
-        prev_open = float(df.at[df.index[i - 1], "Open"])
-        prev_close = float(df.at[df.index[i - 1], "Close"])
-        prev_low = float(df.at[df.index[i - 1], "Low"])
-        prev_high = float(df.at[df.index[i - 1], "High"])
+        # safely extract previous and current candle values via .iloc
+        prev_open = float(df.iloc[i - 1]["Open"])
+        prev_close = float(df.iloc[i - 1]["Close"])
+        prev_low = float(df.iloc[i - 1]["Low"])
+        prev_high = float(df.iloc[i - 1]["High"])
 
-        curr_open = float(df.at[df.index[i], "Open"])
-        curr_close = float(df.at[df.index[i], "Close"])
-        curr_low = float(df.at[df.index[i], "Low"])
-        curr_high = float(df.at[df.index[i], "High"])
+        curr_open = float(df.iloc[i]["Open"])
+        curr_close = float(df.iloc[i]["Close"])
+        curr_low = float(df.iloc[i]["Low"])
+        curr_high = float(df.iloc[i]["High"])
 
         # --- Bullish Engulfing ---
         engulf = (
@@ -63,7 +64,7 @@ def detect_bullish_reversal(df):
 
         if engulf or piercing:
             signals.append({
-                "Date": df.index[i].date(),
+                "Date": df.index[i],  # now integer, fine for tracking
                 "Pattern": "Bullish Engulfing" if engulf else "Piercing",
                 "Prev_Close": round(prev_close, 2),
                 "Curr_Close": round(curr_close, 2)
@@ -73,7 +74,7 @@ def detect_bullish_reversal(df):
 
 
 # ================================
-# 📈 Screener Logic
+# 📈 Screener
 # ================================
 def run_bullish_reversal_screener():
     results = []
@@ -84,12 +85,13 @@ def run_bullish_reversal_screener():
             df = yf.download(ticker, period="3mo", interval="1d", progress=False)
             if df.empty:
                 continue
+
             patterns = detect_bullish_reversal(df)
             if patterns:
                 for p in patterns:
                     results.append({
                         "Ticker": ticker,
-                        "Date": p["Date"],
+                        "Date": df.index[-1].date(),
                         "Pattern": p["Pattern"],
                         "Prev_Close": p["Prev_Close"],
                         "Curr_Close": p["Curr_Close"]
@@ -171,7 +173,6 @@ def send_email_bullish_reversal(df, recipient_email):
     msg['Subject'] = subject
     msg.attach(MIMEText(html_body, 'html'))
 
-    # Attach CSV
     if not df.empty:
         buffer = io.StringIO()
         df.drop(columns=["__highlight__"], errors="ignore").to_csv(buffer, index=False)
@@ -202,7 +203,6 @@ def send_email_bullish_reversal(df, recipient_email):
 # ================================
 if __name__ == "__main__":
     df = run_bullish_reversal_screener()
-
     if df.empty:
         print("\n🚫 No bullish reversal patterns found today.")
     else:
