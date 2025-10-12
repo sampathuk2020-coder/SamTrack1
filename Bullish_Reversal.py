@@ -23,40 +23,54 @@ NASDAQ_TOP30 = [
 # 🟩 Pattern Detection
 # ================================
 def detect_bullish_reversal(df):
-    """Detect bullish engulfing or piercing patterns."""
+    """
+    Detects bullish engulfing and piercing patterns robustly.
+    Returns list of detected pattern dictionaries.
+    """
     signals = []
-    if len(df) < 3:
+    if df.shape[0] < 2:
         return signals
 
     df = df.tail(10).copy()
+
     for i in range(1, len(df)):
-        prev = df.iloc[i - 1]
-        curr = df.iloc[i]
+        # safely extract previous and current candle values
+        prev_open = float(df.at[df.index[i - 1], "Open"])
+        prev_close = float(df.at[df.index[i - 1], "Close"])
+        prev_low = float(df.at[df.index[i - 1], "Low"])
+        prev_high = float(df.at[df.index[i - 1], "High"])
+
+        curr_open = float(df.at[df.index[i], "Open"])
+        curr_close = float(df.at[df.index[i], "Close"])
+        curr_low = float(df.at[df.index[i], "Low"])
+        curr_high = float(df.at[df.index[i], "High"])
 
         # --- Bullish Engulfing ---
         engulf = (
-            prev['Close'] < prev['Open'] and
-            curr['Close'] > curr['Open'] and
-            curr['Close'] > prev['Open'] and
-            curr['Open'] < prev['Close']
+            prev_close < prev_open and
+            curr_close > curr_open and
+            curr_close > prev_open and
+            curr_open < prev_close
         )
 
         # --- Piercing Pattern ---
         piercing = (
-            prev['Close'] < prev['Open'] and
-            curr['Open'] < prev['Low'] and
-            curr['Close'] > (prev['Open'] + prev['Close']) / 2 and
-            curr['Close'] < prev['Open']
+            prev_close < prev_open and
+            curr_open < prev_low and
+            curr_close > (prev_open + prev_close) / 2 and
+            curr_close < prev_open
         )
 
         if engulf or piercing:
             signals.append({
-                "Date": curr.name.date(),
+                "Date": df.index[i].date(),
                 "Pattern": "Bullish Engulfing" if engulf else "Piercing",
-                "Prev_Close": prev['Close'],
-                "Curr_Close": curr['Close']
+                "Prev_Close": round(prev_close, 2),
+                "Curr_Close": round(curr_close, 2)
             })
+
     return signals
+
 
 # ================================
 # 📈 Screener Logic
@@ -77,13 +91,14 @@ def run_bullish_reversal_screener():
                         "Ticker": ticker,
                         "Date": p["Date"],
                         "Pattern": p["Pattern"],
-                        "Prev_Close": round(p["Prev_Close"], 2),
-                        "Curr_Close": round(p["Curr_Close"], 2)
+                        "Prev_Close": p["Prev_Close"],
+                        "Curr_Close": p["Curr_Close"]
                     })
         except Exception as e:
             print(f"❌ Error fetching {ticker}: {e}")
 
     return pd.DataFrame(results)
+
 
 # ================================
 # 🖌️ HTML Utilities
@@ -96,6 +111,7 @@ def highlight_most_recent(df, date_col="Date", ticker_col="Ticker"):
     recent_dates = df_copy.groupby(ticker_col)[date_col].transform("max")
     df_copy["__highlight__"] = df_copy[date_col] == recent_dates
     return df_copy
+
 
 def df_to_html_highlighted(df, color="#0070f3"):
     if df.empty:
@@ -124,8 +140,9 @@ def df_to_html_highlighted(df, color="#0070f3"):
     </table>
     """
 
+
 # ================================
-# 📧 Email Logic (same as MACD/SMA)
+# 📧 Email Logic
 # ================================
 def send_email_bullish_reversal(df, recipient_email):
     sender_email = os.environ.get("EMAIL_USER")
@@ -162,8 +179,11 @@ def send_email_bullish_reversal(df, recipient_email):
         part = MIMEBase('application', 'octet-stream')
         part.set_payload(buffer.read())
         encoders.encode_base64(part)
-        part.add_header('Content-Disposition', 'attachment',
-                        filename=f"Bullish_Reversals_{datetime.now():%Y-%m-%d}.csv")
+        part.add_header(
+            'Content-Disposition',
+            'attachment',
+            filename=f"Bullish_Reversals_{datetime.now():%Y-%m-%d}.csv"
+        )
         msg.attach(part)
 
     try:
@@ -175,6 +195,7 @@ def send_email_bullish_reversal(df, recipient_email):
         print(f"✅ Email sent to {recipient_email}")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
+
 
 # ================================
 # 🚀 Main
