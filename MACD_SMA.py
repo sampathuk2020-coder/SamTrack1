@@ -14,14 +14,22 @@ from datetime import datetime
 # 📌 Ticker List
 # ================================
 NASDAQ100_TICKERS = [
-    "3AAP", "3BAL", "3CON", "3EDF", "3GOO", "3ITL", "3KWE", "3LDE", "3LEU", "3LGO",
-    "3LNP", "3LOI", "3NFL", "3NVD", "3PLT", "3UKL", "5EUS", "5LUS", "5ULS", "AAPL",
-    "ACHR", "ADBE", "AMAT", "AMD", "AMGN", "AMZN", "ANET", "APP", "ASML", "AXP",
-    "BKNG", "BLK", "BLKC", "CCJ", "CON3", "DAGB", "DAVV", "EQIX", "FSLR", "FWRG",
-    "GLDW", "GOOGL", "HOOD", "HUT", "IBKR", "JPM", "KLAC", "LLY", "LQQ3", "LQS5",
-    "MAG5", "MSFT", "MST3", "MSTR", "NFLX", "NVDA", "ORCL", "PLTR", "QCOM", "R1VL",
-    "SNOW", "SNV3", "SPY4", "SQS5", "TLN", "TSLA", "UNH", "V", "VST", "VUAG",
-    "VUKG", "XNIF", "3AMZ", "3FB", "3AMD", "3SLV", "3HCL", "3TSM", "3MSF", "3GDX"
+
+NASDAQ100 = [
+    "AAPL","ABNB","ADBE","ADI","ADP","AEP","ALAB","ALNY",
+    "AMD","AMGN","AMZN","ANSS","APP","ARM","ASML","AVGO",
+    "AXON","AZN","BIIB","BKNG","CDNS","CEG","CHTR","CMCSA",
+    "COST","CPRT","CRWD","CRWV","CSCO","CSX","CTAS","DDOG",
+    "DXCM","EA","EXC","FAST","FTNT","GEHC","GILD","GOOG",
+    "GOOGL","HON","IDXX","INTC","INTU","ISRG","KDP","KHC",
+    "KLAC","LIN","LRCX","MAR","MCHP","MDLZ","MELI","META",
+    "MNST","MPWR","MRVL","MSFT","MSTR","MU","NBIS","NFLX",
+    "NVDA","NXPI","ODFL","ORLY","PANW","PAYX","PCAR","PDD",
+    "PEP","PLTR","PYPL","QCOM","REGN","RKLB","ROP","ROST",
+    "SBUX","SHOP","SNPS","STX","TEAM","TER","TMUS","TSLA",
+    "TTWO","TXN","VRTX","WBD","WDAY","WDC","WMT","XEL"
+]
+    
 ]
 
 # ================================
