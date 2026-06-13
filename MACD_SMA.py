@@ -14,8 +14,6 @@ from datetime import datetime
 # 📌 Ticker List
 # ================================
 NASDAQ100_TICKERS = [
-
-NASDAQ100 = [
     "AAPL","ABNB","ADBE","ADI","ADP","AEP","ALAB","ALNY",
     "AMD","AMGN","AMZN","ANSS","APP","ARM","ASML","AVGO",
     "AXON","AZN","BIIB","BKNG","CDNS","CEG","CHTR","CMCSA",
@@ -30,7 +28,7 @@ NASDAQ100 = [
     "TTWO","TXN","VRTX","WBD","WDAY","WDC","WMT","XEL"
 ]
     
-]
+
 
 # ================================
 # 📈 MACD Functions
