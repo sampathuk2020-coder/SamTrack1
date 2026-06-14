@@ -114,15 +114,15 @@ def macd_conditions(df):
     df["MACD_SIGNAL"] = macd.macd_signal()
     df["MACD_HIST"] = macd.macd_diff()
 
-    latest_macd = df["MACD"].iloc[-1]
+    latest_macd = float(df["MACD"].iloc[-1])
 
     hist_rising = (
-        df["MACD_HIST"].iloc[-3]
-        < df["MACD_HIST"].iloc[-2]
-        < df["MACD_HIST"].iloc[-1]
+        float(df["MACD_HIST"].iloc[-3])
+        < float(df["MACD_HIST"].iloc[-2])
+        < float(df["MACD_HIST"].iloc[-1])
     )
 
-    return latest_macd < 0 and hist_rising, round(float(latest_macd), 3)
+    return latest_macd < 0 and hist_rising, round(latest_macd, 3)
 
 
 # ==========================================================
@@ -134,16 +134,16 @@ def volume_spike(df):
     if avg_volume == 0:
         return False, 0
 
-    ratio = df["Volume"].iloc[-1] / avg_volume
+    ratio = float(df["Volume"].iloc[-1]) / float(avg_volume)
 
-    return ratio > 1.5, round(float(ratio), 2)
+    return ratio > 1.5, round(ratio, 2)
 
 
 # ==========================================================
 # Close Above Previous High
 # ==========================================================
 def close_above_prev_high(df):
-    return df["Close"].iloc[-1] > df["High"].iloc[-2]
+    return float(df["Close"].iloc[-1]) > float(df["High"].iloc[-2])
 
 
 # ==========================================================
