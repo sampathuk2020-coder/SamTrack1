@@ -13,9 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # ==========================================================
 # Get Current S&P 500 Constituents
 # ==========================================================
-    # ==========================================================
-# Stock Universe (No Wikipedia Dependency)
-# ==========================================================
+    
 def get_sp500_companies():
 
     tickers = [
@@ -219,59 +217,53 @@ def scan_stock(ticker, sector):
             return None
 
         macd_ok, macd_value = macd_conditions(df)
-vol_ok, vol_ratio = volume_spike(df)
-price_ok = close_above_prev_high(df)
+        vol_ok, vol_ratio = volume_spike(df)
+        price_ok = close_above_prev_high(df)
 
-engulfing = bullish_engulfing(df)
-soldiers = three_white_soldiers(df)
-hammer_pattern = hammer(df)
+        engulfing = bullish_engulfing(df)
+        soldiers = three_white_soldiers(df)
+        hammer_pattern = hammer(df)
 
-score = 0
-patterns = []
+        score = 0
+        patterns = []
 
-# MACD
-if macd_ok:
-    score += 1
+        if macd_ok:
+            score += 1
 
-# Volume spike
-if vol_ok:
-    score += 1
+        if vol_ok:
+            score += 1
 
-# Breakout
-if price_ok:
-    score += 1
+        if price_ok:
+            score += 1
 
-# Candlestick patterns
-if engulfing:
-    score += 2
-    patterns.append("Bullish Engulfing")
+        if engulfing:
+            score += 2
+            patterns.append("Bullish Engulfing")
 
-if soldiers:
-    score += 3
-    patterns.append("Three White Soldiers")
+        if soldiers:
+            score += 3
+            patterns.append("Three White Soldiers")
 
-if hammer_pattern:
-    score += 1
-    patterns.append("Hammer")
+        if hammer_pattern:
+            score += 1
+            patterns.append("Hammer")
 
-# Only report stocks with at least one bullish signal
-if score > 0:
+        if score > 0:
+            return {
+                "Ticker": ticker,
+                "Sector": sector,
+                "Score": score,
+                "Pattern": ", ".join(patterns) if patterns else "None",
+                "MACD_Bullish": "Yes" if macd_ok else "No",
+                "Volume_Spike": "Yes" if vol_ok else "No",
+                "Breakout": "Yes" if price_ok else "No",
+                "Close": round(float(df["Close"].iloc[-1]), 2),
+                "MACD": macd_value,
+                "Volume_Multiple": vol_ratio,
+            }
 
-    return {
-        "Ticker": ticker,
-        "Sector": sector,
-        "Score": score,
-        "Pattern": ", ".join(patterns) if patterns else "None",
-        "MACD_Bullish": "Yes" if macd_ok else "No",
-        "Volume_Spike": "Yes" if vol_ok else "No",
-        "Breakout": "Yes" if price_ok else "No",
-        "Close": round(float(df["Close"].iloc[-1]), 2),
-        "MACD": macd_value,
-        "Volume_Multiple": vol_ratio,
-    }
-
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"{ticker}: {e}")
 
     return None
 
@@ -311,11 +303,8 @@ def main():
 
     df_results = df_results.sort_values(
     by=["Score", "Volume_Multiple"],
-    ascending=[False, False]
-)
+    ascending=[False, False])
       
-    )
-
     print(df_results.to_string(index=False))
     send_email(df_results)
 
