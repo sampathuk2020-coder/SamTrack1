@@ -1,26 +1,32 @@
-runs-on: ubuntu-latest
+name:  SAM REVERSAL
 
-timeout-minutes: 60
+# on:
+#  schedule:
+#  - cron: "0 15 * * *"  # 15:00 UTC → adjust for DST if necessary
+#  workflow_dispatch:  # Manual trigger for testing
 
-steps:
+jobs:
+  test_script:
+    runs-on: ubuntu-latest
 
-  - name: Checkout Repository
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-  - name: Setup Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: '3.11'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-  - name: Install Dependencies
-    run: |
-      python -m pip install --upgrade pip
-      pip install yfinance pandas ta lxml html5lib
-
-  - name: Run Bullish Reversal Scanner
-    env:
-      EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
-      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-      EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
-    run: |
-      python Sam_Reversal.py 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yfinance pandas ta lxml html5lib
+          
+          
+      - name: Run Python Script
+        run: python Sam_Reversal.py
+        env:
+          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECIPIENT: ${{  secrets.EMAIL_RECIPIENT}}
