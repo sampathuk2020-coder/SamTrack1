@@ -47,10 +47,10 @@ def bullish_engulfing(df):
     curr = df.iloc[-1]
 
     return (
-        float(prev["Close"]) < float(prev["Open"])
-        and float(curr["Close"]) > float(curr["Open"])
-        and float(curr["Open"]) < float(prev["Close"])
-        and float(curr["Close"]) > float(prev["Open"])
+        prev["Close"] < prev["Open"]
+        and curr["Close"] > curr["Open"]
+        and curr["Open"] < prev["Close"]
+        and curr["Close"] > prev["Open"]
     )
 
 
@@ -66,14 +66,14 @@ def three_white_soldiers(df):
     c3 = df.iloc[-1]
 
     return (
-        float(c1["Close"]) > float(c1["Open"])
-        and float(c2["Close"]) > float(c2["Open"])
-        and float(c3["Close"]) > float(c3["Open"])
-        and float(c1["Close"]) < float(c2["Close"]) < float(c3["Close"])
-        and float(c2["Open"]) > float(c1["Open"])
-        and float(c2["Open"]) < float(c1["Close"])
-        and float(c3["Open"]) > float(c2["Open"])
-        and float(c3["Open"]) < float(c2["Close"])
+        c1["Close"] > c1["Open"]
+        and c2["Close"] > c2["Open"]
+        and c3["Close"] > c3["Open"]
+        and c1["Close"] < c2["Close"] < c3["Close"]
+        and c2["Open"] > c1["Open"]
+        and c2["Open"] < c1["Close"]
+        and c3["Open"] > c2["Open"]
+        and c3["Open"] < c2["Close"]
     )
 
 
@@ -83,10 +83,10 @@ def three_white_soldiers(df):
 def hammer(df):
     candle = df.iloc[-1]
 
-    open_price = float(candle["Open"])
-    close_price = float(candle["Close"])
-    high_price = float(candle["High"])
-    low_price = float(candle["Low"])
+    open_price = candle["Open"]
+    close_price = candle["Close"]
+    high_price = candle["High"]
+    low_price = candle["Low"]
 
     body = abs(close_price - open_price)
 
@@ -114,39 +114,36 @@ def macd_conditions(df):
     df["MACD_SIGNAL"] = macd.macd_signal()
     df["MACD_HIST"] = macd.macd_diff()
 
-    latest_macd = float(df["MACD"].iloc[-1])
-    
-    hist_val_3 = float(df["MACD_HIST"].iloc[-3])
-    hist_val_2 = float(df["MACD_HIST"].iloc[-2])
-    hist_val_1 = float(df["MACD_HIST"].iloc[-1])
+    latest_macd = df["MACD"].iloc[-1]
 
-    hist_rising = hist_val_3 < hist_val_2 < hist_val_1
+    hist_rising = (
+        df["MACD_HIST"].iloc[-3]
+        < df["MACD_HIST"].iloc[-2]
+        < df["MACD_HIST"].iloc[-1]
+    )
 
-    return latest_macd < 0 and hist_rising, round(latest_macd, 3)
+    return latest_macd < 0 and hist_rising, round(float(latest_macd), 3)
 
 
 # ==========================================================
 # Volume Spike
 # ==========================================================
 def volume_spike(df):
-    avg_volume = float(df["Volume"].rolling(20).mean().iloc[-1])
+    avg_volume = df["Volume"].rolling(20).mean().iloc[-1]
 
     if avg_volume == 0:
         return False, 0
 
-    current_volume = float(df["Volume"].iloc[-1])
-    ratio = current_volume / avg_volume
+    ratio = df["Volume"].iloc[-1] / avg_volume
 
-    return ratio > 1.5, round(ratio, 2)
+    return ratio > 1.5, round(float(ratio), 2)
 
 
 # ==========================================================
 # Close Above Previous High
 # ==========================================================
 def close_above_prev_high(df):
-    current_close = float(df["Close"].iloc[-1])
-    prev_high = float(df["High"].iloc[-2])
-    return current_close > prev_high
+    return df["Close"].iloc[-1] > df["High"].iloc[-2]
 
 
 # ==========================================================
