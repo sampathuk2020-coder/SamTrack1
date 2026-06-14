@@ -1,3 +1,6 @@
 yfinance
 pandas
 numpy
+ta
+lxml
+html5lib
