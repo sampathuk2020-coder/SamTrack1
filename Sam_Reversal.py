@@ -13,11 +13,32 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # ==========================================================
 # Get Current S&P 500 Constituents
 # ==========================================================
+    # ==========================================================
+# Stock Universe (No Wikipedia Dependency)
+# ==========================================================
 def get_sp500_companies():
-    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    sp500 = pd.read_html(url)[0]
-    sp500["Symbol"] = sp500["Symbol"].str.replace(".", "-", regex=False)
-    return sp500
+
+    tickers = [
+        "AAPL","MSFT","NVDA","AMZN","META","GOOGL","GOOG","BRK-B","AVGO","TSLA",
+        "JPM","LLY","V","MA","NFLX","COST","WMT","XOM","ORCL","UNH",
+        "JNJ","PG","HD","ABBV","BAC","KO","CRM","CVX","MRK","AMD",
+        "PEP","ACN","TMO","LIN","CSCO","ABT","MCD","WFC","IBM","GE",
+        "DIS","PM","CAT","QCOM","TXN","INTU","DHR","NOW","GS","RTX",
+        "AMGN","SPGI","BKNG","ISRG","HON","BLK","AMAT","SYK","TJX","PGR",
+        "ADBE","C","LOW","ETN","SCHW","COP","BSX","LRCX","PANW","ADP",
+        "VRTX","MMC","ANET","UPS","DE","BA","CB","MDT","MO","ELV",
+        "CI","GILD","SO","CME","BMY","NEE","PLD","ICE","CMCSA","REGN",
+        "DUK","AON","APD","EQIX","SHW","CL","EOG","CDNS","PYPL","TT",
+        "WM","CRWD","EMR","PH","APH","ZTS","MCK","ROP","CVS","USB",
+        "FDX","ITW","HCA","GD","MAR","MSI","CARR","AJG","COF","NXPI",
+        "MMM","NOC","ECL","TGT","PCAR","FTNT","OXY","SLB","FCX","AIG",
+        "PLTR","COIN","MSTR","HOOD","SMCI"
+    ]
+
+    return pd.DataFrame({
+        "Symbol": tickers,
+        "GICS Sector": ["Large Cap"] * len(tickers)
+    })
 
 
 # ==========================================================
