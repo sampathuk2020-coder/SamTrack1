@@ -47,10 +47,10 @@ def bullish_engulfing(df):
     curr = df.iloc[-1]
 
     return (
-        prev["Close"] < prev["Open"]
-        and curr["Close"] > curr["Open"]
-        and curr["Open"] < prev["Close"]
-        and curr["Close"] > prev["Open"]
+        float(prev["Close"]) < float(prev["Open"])
+        and float(curr["Close"]) > float(curr["Open"])
+        and float(curr["Open"]) < float(prev["Close"])
+        and float(curr["Close"]) > float(prev["Open"])
     )
 
 
@@ -66,14 +66,14 @@ def three_white_soldiers(df):
     c3 = df.iloc[-1]
 
     return (
-        c1["Close"] > c1["Open"]
-        and c2["Close"] > c2["Open"]
-        and c3["Close"] > c3["Open"]
-        and c1["Close"] < c2["Close"] < c3["Close"]
-        and c2["Open"] > c1["Open"]
-        and c2["Open"] < c1["Close"]
-        and c3["Open"] > c2["Open"]
-        and c3["Open"] < c2["Close"]
+        float(c1["Close"]) > float(c1["Open"])
+        and float(c2["Close"]) > float(c2["Open"])
+        and float(c3["Close"]) > float(c3["Open"])
+        and float(c1["Close"]) < float(c2["Close"]) < float(c3["Close"])
+        and float(c2["Open"]) > float(c1["Open"])
+        and float(c2["Open"]) < float(c1["Close"])
+        and float(c3["Open"]) > float(c2["Open"])
+        and float(c3["Open"]) < float(c2["Close"])
     )
 
 
@@ -83,10 +83,10 @@ def three_white_soldiers(df):
 def hammer(df):
     candle = df.iloc[-1]
 
-    open_price = candle["Open"]
-    close_price = candle["Close"]
-    high_price = candle["High"]
-    low_price = candle["Low"]
+    open_price = float(candle["Open"])
+    close_price = float(candle["Close"])
+    high_price = float(candle["High"])
+    low_price = float(candle["Low"])
 
     body = abs(close_price - open_price)
 
