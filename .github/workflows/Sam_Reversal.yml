@@ -1,9 +1,9 @@
-name:  SAM_REVERSAL
+name: SAM_REVERSAL
 
- on:
+on:
   schedule:
-  - cron: "0 15 * * *"  # 15:00 UTC → adjust for DST if necessary
-   workflow_dispatch:  # Manual trigger for testing
+    - cron: "0 15 * * *"   # Runs daily at 15:00 UTC
+  workflow_dispatch:       # Manual trigger
 
 jobs:
   test_script:
@@ -16,17 +16,16 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install yfinance pandas ta lxml html5lib
-          
-          
+
       - name: Run Python Script
         run: python Sam_Reversal.py
         env:
           EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_RECIPIENT: ${{  secrets.EMAIL_RECIPIENT}}
+          EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
