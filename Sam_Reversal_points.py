@@ -108,7 +108,7 @@ def hammer(df):
 # MACD Conditions
 # ==========================================================
 def macd_conditions(df):
-    macd = MACD(close=df["Close"])
+    macd = MACD(close=df["Close"].squeeze())
 
     df["MACD"] = macd.macd()
     df["MACD_SIGNAL"] = macd.macd_signal()
