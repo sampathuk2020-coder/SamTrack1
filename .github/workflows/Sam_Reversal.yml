@@ -1,9 +1,9 @@
 name:  SAM REVERSAL
 
-# on:
-#  schedule:
-#  - cron: "0 15 * * *"  # 15:00 UTC → adjust for DST if necessary
-#  workflow_dispatch:  # Manual trigger for testing
+ on:
+  schedule:
+  - cron: "0 15 * * *"  # 15:00 UTC → adjust for DST if necessary
+   workflow_dispatch:  # Manual trigger for testing
 
 jobs:
   test_script:
