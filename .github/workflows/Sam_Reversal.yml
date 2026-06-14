@@ -2,8 +2,8 @@ name: SAM_REVERSAL
 
 on:
   schedule:
-    - cron: "0 15 * * *"   # Runs daily at 15:00 UTC
-  workflow_dispatch:       # Manual trigger
+    - cron: '0 15 * * *'
+  workflow_dispatch:
 
 jobs:
   test_script:
@@ -16,7 +16,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
