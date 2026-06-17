@@ -107,24 +107,95 @@ def hammer(df):
 
 
 # ==========================================================
-# MACD Conditions
+# MACD Conditions (Past 10 Days)
 # ==========================================================
-def macd_conditions(df):
+def macd_conditions_past_10_days(df):
     macd = MACD(close=df["Close"])
 
     df["MACD"] = macd.macd()
     df["MACD_SIGNAL"] = macd.macd_signal()
     df["MACD_HIST"] = macd.macd_diff()
 
+    # Check past 10 days for MACD below 0 with rising histogram
+    past_10_days = df.tail(10)
+    
+    macd_found = False
+    for i in range(2, len(past_10_days)):
+        curr_macd = past_10_days["MACD"].iloc[i]
+        hist_rising = (
+            past_10_days["MACD_HIST"].iloc[i-2]
+            < past_10_days["MACD_HIST"].iloc[i-1]
+            < past_10_days["MACD_HIST"].iloc[i]
+        )
+        
+        if curr_macd < 0 and hist_rising:
+            macd_found = True
+            break
+    
     latest_macd = df["MACD"].iloc[-1]
+    return macd_found, round(float(latest_macd), 3)
 
-    hist_rising = (
-        df["MACD_HIST"].iloc[-3]
-        < df["MACD_HIST"].iloc[-2]
-        < df["MACD_HIST"].iloc[-1]
-    )
 
-    return latest_macd < 0 and hist_rising, round(float(latest_macd), 3)
+# ==========================================================
+# Bullish Patterns in Past 10 Days
+# ==========================================================
+def bullish_patterns_past_10_days(df):
+    """Check for bullish patterns (Engulfing, Three White Soldiers, Hammer) in past 10 days"""
+    past_10_days = df.tail(10)
+    patterns_found = []
+    
+    # Check Hammer pattern in past 10 days
+    for i in range(len(past_10_days) - 1, -1, -1):
+        candle = past_10_days.iloc[i]
+        
+        open_price = candle["Open"]
+        close_price = candle["Close"]
+        high_price = candle["High"]
+        low_price = candle["Low"]
+        
+        body = abs(close_price - open_price)
+        
+        if body > 0:
+            upper_shadow = high_price - max(open_price, close_price)
+            lower_shadow = min(open_price, close_price) - low_price
+            range_size = high_price - low_price
+            
+            if (lower_shadow >= body * 2 
+                and upper_shadow <= body * 0.3 
+                and body >= range_size * 0.20):
+                patterns_found.append("Hammer")
+                break
+    
+    # Check Bullish Engulfing in past 10 days
+    for i in range(1, len(past_10_days)):
+        prev = past_10_days.iloc[i-1]
+        curr = past_10_days.iloc[i]
+        
+        if (prev["Close"] < prev["Open"]
+            and curr["Close"] > curr["Open"]
+            and curr["Open"] < prev["Close"]
+            and curr["Close"] > prev["Open"]):
+            patterns_found.append("Bullish Engulfing")
+            break
+    
+    # Check Three White Soldiers in past 10 days
+    for i in range(2, len(past_10_days)):
+        c1 = past_10_days.iloc[i-2]
+        c2 = past_10_days.iloc[i-1]
+        c3 = past_10_days.iloc[i]
+        
+        if (c1["Close"] > c1["Open"]
+            and c2["Close"] > c2["Open"]
+            and c3["Close"] > c3["Open"]
+            and c1["Close"] < c2["Close"] < c3["Close"]
+            and c2["Open"] > c1["Open"]
+            and c2["Open"] < c1["Close"]
+            and c3["Open"] > c2["Open"]
+            and c3["Open"] < c2["Close"]):
+            patterns_found.append("Three White Soldiers")
+            break
+    
+    return len(patterns_found) > 0, list(set(patterns_found))
 
 
 # ==========================================================
@@ -181,11 +252,8 @@ def send_email(df_results):
     <br>
     <h3>Scan Criteria</h3>
     <ul>
-      <li>MACD below 0</li>
-      <li>MACD Histogram rising for 3 days</li>
-      <li>Volume &gt; 1.5x 20-day average</li>
-      <li>Close above previous day's high</li>
-      <li>Bullish Engulfing OR Three White Soldiers OR Hammer</li>
+      <li>MACD below 0 with rising histogram (past 10 days)</li>
+      <li>Bullish Engulfing OR Three White Soldiers OR Hammer (past 10 days)</li>
     </ul>
     </body>
     </html>
@@ -216,34 +284,16 @@ def scan_stock(ticker, sector):
         if len(df) < 50:
             return None
 
-        macd_ok, macd_value = macd_conditions(df)
-        vol_ok, vol_ratio = volume_spike(df)
-        price_ok = close_above_prev_high(df)
+        macd_ok, macd_value = macd_conditions_past_10_days(df)
+        pattern_ok, patterns = bullish_patterns_past_10_days(df)
 
-        engulfing = bullish_engulfing(df)
-        soldiers = three_white_soldiers(df)
-        hammer_pattern = hammer(df)
-
-        pattern_ok = engulfing or soldiers or hammer_pattern
-
-#        if macd_ok and price_ok and pattern_ok:
-        if macd_ok and  pattern_ok:
-            patterns = []
-
-            if engulfing:
-                patterns.append("Bullish Engulfing")
-            if soldiers:
-                patterns.append("Three White Soldiers")
-            if hammer_pattern:
-                patterns.append("Hammer")
-
+        if macd_ok and pattern_ok:
             return {
                 "Ticker": ticker,
                 "Sector": sector,
                 "Pattern": ", ".join(patterns),
                 "Close": round(float(df["Close"].iloc[-1]), 2),
                 "MACD": macd_value,
-                "Volume_Multiple": vol_ratio,
             }
 
     except Exception:
@@ -284,7 +334,7 @@ def main():
 
     df_results = pd.DataFrame(results)
     df_results = df_results.sort_values(
-        by="Volume_Multiple",
+        by="Close",
         ascending=False
     )
 
