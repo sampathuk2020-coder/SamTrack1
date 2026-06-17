@@ -226,7 +226,8 @@ def scan_stock(ticker, sector):
 
         pattern_ok = engulfing or soldiers or hammer_pattern
 
-        if macd_ok and vol_ok and price_ok and pattern_ok:
+#        if macd_ok and price_ok and pattern_ok:
+        if macd_ok and  pattern_ok:
             patterns = []
 
             if engulfing:
