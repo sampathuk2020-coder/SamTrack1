@@ -422,6 +422,6 @@ def debug_single_stock(ticker="MSFT"):
 
 if __name__ == "__main__":
     # Uncomment the line below to debug a specific stock
-    # debug_single_stock("MSFT")
+     debug_single_stock("MSFT")
     
     main()
