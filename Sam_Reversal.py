@@ -123,7 +123,7 @@ def macd_conditions_past_n_days(df, lookback_days=LOOKBACK_DAYS):
     df["MACD_HIST"] = macd.macd_diff()
 
     # Check past N days for MACD below 0 with rising histogram
-    past_n_days = df.tail(lookback_days)
+    past_n_days = df.tail(lookback_days).copy()
     
     macd_found = False
     for i in range(2, len(past_n_days)):
@@ -147,11 +147,11 @@ def macd_conditions_past_n_days(df, lookback_days=LOOKBACK_DAYS):
 # ==========================================================
 def bullish_patterns_past_n_days(df, lookback_days=LOOKBACK_DAYS):
     """Check for bullish patterns (Engulfing, Three White Soldiers, Hammer) in past N days"""
-    past_n_days = df.tail(lookback_days)
+    past_n_days = df.tail(lookback_days).copy().reset_index(drop=True)
     patterns_found = []
     
-    # Check Hammer pattern in past N days
-    for i in range(len(past_n_days) - 1, -1, -1):
+    # Check Hammer pattern in past N days - scan all candles
+    for i in range(len(past_n_days)):
         candle = past_n_days.iloc[i]
         
         open_price = candle["Open"]
@@ -172,7 +172,7 @@ def bullish_patterns_past_n_days(df, lookback_days=LOOKBACK_DAYS):
                 patterns_found.append("Hammer")
                 break
     
-    # Check Bullish Engulfing in past N days
+    # Check Bullish Engulfing in past N days - scan all consecutive pairs
     for i in range(1, len(past_n_days)):
         prev = past_n_days.iloc[i-1]
         curr = past_n_days.iloc[i]
@@ -184,7 +184,7 @@ def bullish_patterns_past_n_days(df, lookback_days=LOOKBACK_DAYS):
             patterns_found.append("Bullish Engulfing")
             break
     
-    # Check Three White Soldiers in past N days
+    # Check Three White Soldiers in past N days - scan all consecutive triplets
     for i in range(2, len(past_n_days)):
         c1 = past_n_days.iloc[i-2]
         c2 = past_n_days.iloc[i-1]
@@ -276,9 +276,9 @@ def send_email(df_results, lookback_days=LOOKBACK_DAYS):
 
 
 # ==========================================================
-# Scan One Stock
+# Scan One Stock with Debugging
 # ==========================================================
-def scan_stock(ticker, sector, lookback_days=LOOKBACK_DAYS):
+def scan_stock(ticker, sector, lookback_days=LOOKBACK_DAYS, debug=False):
     try:
         df = yf.download(
             ticker,
@@ -293,6 +293,12 @@ def scan_stock(ticker, sector, lookback_days=LOOKBACK_DAYS):
 
         macd_ok, macd_value = macd_conditions_past_n_days(df, lookback_days)
         pattern_ok, patterns = bullish_patterns_past_n_days(df, lookback_days)
+
+        if debug and ticker == "MSFT":
+            print(f"\n[DEBUG] {ticker}")
+            print(f"  MACD Found: {macd_ok}, Value: {macd_value}")
+            print(f"  Patterns Found: {pattern_ok}, Patterns: {patterns}")
+            print(f"  Last 5 closes: {df['Close'].tail(5).tolist()}")
 
         # Primary condition: MACD + Pattern
         if macd_ok and pattern_ok:
@@ -316,8 +322,9 @@ def scan_stock(ticker, sector, lookback_days=LOOKBACK_DAYS):
                 "Condition": "Pattern Only (MACD not met)"
             }
 
-    except Exception:
-        pass
+    except Exception as e:
+        if debug and ticker == "MSFT":
+            print(f"[DEBUG ERROR] {ticker}: {str(e)}")
 
     return None
 
@@ -362,5 +369,59 @@ def main():
     send_email(df_results, LOOKBACK_DAYS)
 
 
+# ==========================================================
+# Debug Mode - Test Single Stock
+# ==========================================================
+def debug_single_stock(ticker="MSFT"):
+    """Debug mode to test pattern detection on a single stock"""
+    print(f"\n{'='*60}")
+    print(f"DEBUG MODE: Testing {ticker}")
+    print(f"{'='*60}\n")
+    
+    df = yf.download(
+        ticker,
+        period="6mo",
+        interval="1d",
+        auto_adjust=True,
+        progress=False,
+    )
+    
+    print(f"Downloaded {len(df)} days of data\n")
+    
+    # Show recent data
+    print("Last 10 days of data:")
+    print(df[["Open", "High", "Low", "Close"]].tail(10))
+    
+    # Test pattern detection
+    past_30 = df.tail(30).copy().reset_index(drop=True)
+    
+    print(f"\n\nScanning {len(past_30)} days for patterns...\n")
+    
+    # Test Three White Soldiers
+    print("Testing Three White Soldiers:")
+    for i in range(2, len(past_30)):
+        c1 = past_30.iloc[i-2]
+        c2 = past_30.iloc[i-1]
+        c3 = past_30.iloc[i]
+        
+        if (c1["Close"] > c1["Open"]
+            and c2["Close"] > c2["Open"]
+            and c3["Close"] > c3["Open"]):
+            
+            close_rising = c1["Close"] < c2["Close"] < c3["Close"]
+            open_pattern = c2["Open"] > c1["Open"] and c2["Open"] < c1["Close"] and c3["Open"] > c2["Open"] and c3["Open"] < c2["Close"]
+            
+            print(f"  Index {i-2},{i-1},{i}: Closes rising? {close_rising}, Open pattern? {open_pattern}")
+            
+            if close_rising and open_pattern:
+                print(f"    ✓ THREE WHITE SOLDIERS FOUND at index {i}!")
+                print(f"      C1: O={c1['Open']:.2f} C={c1['Close']:.2f}")
+                print(f"      C2: O={c2['Open']:.2f} C={c2['Close']:.2f}")
+                print(f"      C3: O={c3['Open']:.2f} C={c3['Close']:.2f}")
+
+
 if __name__ == "__main__":
+    # Uncomment the line below to debug a specific stock
+    # debug_single_stock("MSFT")
+    
     main()
