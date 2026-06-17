@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # ==========================================================
 # CONFIGURATION - CONFIGURABLE LOOKBACK PERIOD
 # ==========================================================
-LOOKBACK_DAYS = 10  # Change this to 20 or any other value to adjust lookback period
+LOOKBACK_DAYS = 30  # Change this to 20 or any other value to adjust lookback period
 
 
 # ==========================================================
