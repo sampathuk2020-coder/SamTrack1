@@ -11,6 +11,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 # ==========================================================
+# CONFIGURATION - CONFIGURABLE LOOKBACK PERIOD
+# ==========================================================
+LOOKBACK_DAYS = 10  # Change this to 20 or any other value to adjust lookback period
+
+
+# ==========================================================
 # Get Current S&P 500 Constituents
 # ==========================================================
     # ==========================================================
@@ -107,25 +113,25 @@ def hammer(df):
 
 
 # ==========================================================
-# MACD Conditions (Past 10 Days)
+# MACD Conditions (Configurable Lookback Days)
 # ==========================================================
-def macd_conditions_past_10_days(df):
+def macd_conditions_past_n_days(df, lookback_days=LOOKBACK_DAYS):
     macd = MACD(close=df["Close"])
 
     df["MACD"] = macd.macd()
     df["MACD_SIGNAL"] = macd.macd_signal()
     df["MACD_HIST"] = macd.macd_diff()
 
-    # Check past 10 days for MACD below 0 with rising histogram
-    past_10_days = df.tail(10)
+    # Check past N days for MACD below 0 with rising histogram
+    past_n_days = df.tail(lookback_days)
     
     macd_found = False
-    for i in range(2, len(past_10_days)):
-        curr_macd = past_10_days["MACD"].iloc[i]
+    for i in range(2, len(past_n_days)):
+        curr_macd = past_n_days["MACD"].iloc[i]
         hist_rising = (
-            past_10_days["MACD_HIST"].iloc[i-2]
-            < past_10_days["MACD_HIST"].iloc[i-1]
-            < past_10_days["MACD_HIST"].iloc[i]
+            past_n_days["MACD_HIST"].iloc[i-2]
+            < past_n_days["MACD_HIST"].iloc[i-1]
+            < past_n_days["MACD_HIST"].iloc[i]
         )
         
         if curr_macd < 0 and hist_rising:
@@ -137,16 +143,16 @@ def macd_conditions_past_10_days(df):
 
 
 # ==========================================================
-# Bullish Patterns in Past 10 Days
+# Bullish Patterns in Configurable Lookback Period
 # ==========================================================
-def bullish_patterns_past_10_days(df):
-    """Check for bullish patterns (Engulfing, Three White Soldiers, Hammer) in past 10 days"""
-    past_10_days = df.tail(10)
+def bullish_patterns_past_n_days(df, lookback_days=LOOKBACK_DAYS):
+    """Check for bullish patterns (Engulfing, Three White Soldiers, Hammer) in past N days"""
+    past_n_days = df.tail(lookback_days)
     patterns_found = []
     
-    # Check Hammer pattern in past 10 days
-    for i in range(len(past_10_days) - 1, -1, -1):
-        candle = past_10_days.iloc[i]
+    # Check Hammer pattern in past N days
+    for i in range(len(past_n_days) - 1, -1, -1):
+        candle = past_n_days.iloc[i]
         
         open_price = candle["Open"]
         close_price = candle["Close"]
@@ -166,10 +172,10 @@ def bullish_patterns_past_10_days(df):
                 patterns_found.append("Hammer")
                 break
     
-    # Check Bullish Engulfing in past 10 days
-    for i in range(1, len(past_10_days)):
-        prev = past_10_days.iloc[i-1]
-        curr = past_10_days.iloc[i]
+    # Check Bullish Engulfing in past N days
+    for i in range(1, len(past_n_days)):
+        prev = past_n_days.iloc[i-1]
+        curr = past_n_days.iloc[i]
         
         if (prev["Close"] < prev["Open"]
             and curr["Close"] > curr["Open"]
@@ -178,11 +184,11 @@ def bullish_patterns_past_10_days(df):
             patterns_found.append("Bullish Engulfing")
             break
     
-    # Check Three White Soldiers in past 10 days
-    for i in range(2, len(past_10_days)):
-        c1 = past_10_days.iloc[i-2]
-        c2 = past_10_days.iloc[i-1]
-        c3 = past_10_days.iloc[i]
+    # Check Three White Soldiers in past N days
+    for i in range(2, len(past_n_days)):
+        c1 = past_n_days.iloc[i-2]
+        c2 = past_n_days.iloc[i-1]
+        c3 = past_n_days.iloc[i]
         
         if (c1["Close"] > c1["Open"]
             and c2["Close"] > c2["Open"]
@@ -222,7 +228,7 @@ def close_above_prev_high(df):
 # ==========================================================
 # Email Results
 # ==========================================================
-def send_email(df_results):
+def send_email(df_results, lookback_days=LOOKBACK_DAYS):
     sender_email = os.environ["EMAIL_ADDRESS"]
     receiver_email = os.environ.get("EMAIL_RECIPIENT", sender_email)
     app_password = os.environ["EMAIL_PASSWORD"]
@@ -252,8 +258,9 @@ def send_email(df_results):
     <br>
     <h3>Scan Criteria</h3>
     <ul>
-      <li>MACD below 0 with rising histogram (past 10 days)</li>
-      <li>Bullish Engulfing OR Three White Soldiers OR Hammer (past 10 days)</li>
+      <li>MACD below 0 with rising histogram (past {lookback_days} days)</li>
+      <li>Bullish Engulfing OR Three White Soldiers OR Hammer (past {lookback_days} days)</li>
+      <li>If MACD condition not met: fallback to look for patterns only (past {lookback_days} days)</li>
     </ul>
     </body>
     </html>
@@ -271,7 +278,7 @@ def send_email(df_results):
 # ==========================================================
 # Scan One Stock
 # ==========================================================
-def scan_stock(ticker, sector):
+def scan_stock(ticker, sector, lookback_days=LOOKBACK_DAYS):
     try:
         df = yf.download(
             ticker,
@@ -284,9 +291,10 @@ def scan_stock(ticker, sector):
         if len(df) < 50:
             return None
 
-        macd_ok, macd_value = macd_conditions_past_10_days(df)
-        pattern_ok, patterns = bullish_patterns_past_10_days(df)
+        macd_ok, macd_value = macd_conditions_past_n_days(df, lookback_days)
+        pattern_ok, patterns = bullish_patterns_past_n_days(df, lookback_days)
 
+        # Primary condition: MACD + Pattern
         if macd_ok and pattern_ok:
             return {
                 "Ticker": ticker,
@@ -294,6 +302,18 @@ def scan_stock(ticker, sector):
                 "Pattern": ", ".join(patterns),
                 "Close": round(float(df["Close"].iloc[-1]), 2),
                 "MACD": macd_value,
+                "Condition": "MACD + Pattern"
+            }
+        
+        # Fallback: If MACD not found, look for patterns only
+        elif not macd_ok and pattern_ok:
+            return {
+                "Ticker": ticker,
+                "Sector": sector,
+                "Pattern": ", ".join(patterns),
+                "Close": round(float(df["Close"].iloc[-1]), 2),
+                "MACD": macd_value,
+                "Condition": "Pattern Only (MACD not met)"
             }
 
     except Exception:
@@ -303,7 +323,7 @@ def scan_stock(ticker, sector):
 
 
 def main():
-    print("Loading S&P 500 constituents...")
+    print(f"Loading S&P 500 constituents (Lookback period: {LOOKBACK_DAYS} days)...")
 
     sp500 = get_sp500_companies()
 
@@ -316,7 +336,7 @@ def main():
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {
-            executor.submit(scan_stock, ticker, ticker_sector_map[ticker]): ticker
+            executor.submit(scan_stock, ticker, ticker_sector_map[ticker], LOOKBACK_DAYS): ticker
             for ticker in tickers
         }
 
@@ -328,7 +348,7 @@ def main():
     if len(results) == 0:
         send_email(pd.DataFrame([{
             "Message": "No stocks matched all criteria today."
-        }]))
+        }]), LOOKBACK_DAYS)
         print("No stocks matched all criteria today.")
         return
 
@@ -339,7 +359,7 @@ def main():
     )
 
     print(df_results.to_string(index=False))
-    send_email(df_results)
+    send_email(df_results, LOOKBACK_DAYS)
 
 
 if __name__ == "__main__":
